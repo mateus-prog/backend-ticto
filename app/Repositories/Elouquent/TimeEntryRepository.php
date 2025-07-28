@@ -25,44 +25,36 @@ class TimeEntryRepository extends AbstractRepository
 
     public function allTimeEntryUser(Request $request): object
     {
-        return DB::table('time_entries')
-            ->select(
-                'users.first_name as user',
-                'time_entries.entry_date as date',
-                DB::raw('GROUP_CONCAT(time_entries.entry_time ORDER BY entry_time SEPARATOR ", ") as times')
-            )
-            ->join('users', 'users.id', '=', 'time_entries.user_id')
+        return DB::table('time_entries as t')
+            ->select([
+                't.id as id',
+                DB::raw("CONCAT(u.first_name, ' ', u.last_name) as employee"),
+                'u.position as position',
+                DB::raw("TIMESTAMPDIFF(YEAR, u.date_of_birth, CURDATE()) as age"),
+                DB::raw("IFNULL(CONCAT(m.first_name, ' ', m.last_name), 'Sem Gestor') as manager"),
+                DB::raw("CONCAT(t.entry_date, ' ', t.entry_time) as time")
+            ])
+            ->join('users as u', 'u.id', '=', 't.user_id')
+            ->leftJoin('users as m', 'u.manager_id', '=', 'm.id')
             ->when($request->input('date_start') && $request->input('date_end'), function ($query) use ($request) {
-                // Remove o conteúdo entre parênteses
-                $dateJsLimpo = preg_replace('/\s*\(.*\)$/', '', $request->input('date_start'));
-
-                // Agora podes fazer o parse com Carbon
-                $dateStart = Carbon::parse($dateJsLimpo)
+                $dateStart = Carbon::parse(preg_replace('/\s*\(.*\)$/', '', $request->input('date_start')))
                     ->timezone('America/Sao_Paulo')
                     ->format('Y-m-d');
 
-                // Remove o conteúdo entre parênteses
-                $dateJsLimpo = preg_replace('/\s*\(.*\)$/', '', $request->input('date_end'));
-
-                // Agora podes fazer o parse com Carbon
-                $dateEnd = Carbon::parse($dateJsLimpo)
+                $dateEnd = Carbon::parse(preg_replace('/\s*\(.*\)$/', '', $request->input('date_end')))
                     ->timezone('America/Sao_Paulo')
                     ->format('Y-m-d');
-                
-                
-                return $query->whereBetween('time_entries.entry_date', [
-                    $dateStart,
-                    $dateEnd
-                ]);
+
+                return $query->whereBetween('t.entry_date', [$dateStart, $dateEnd]);
             })
             ->when($request->input('user_id') != 0, function ($query) use ($request) {
-                return $query->where('time_entries.user_id', $request->input('user_id'));
+                return $query->where('t.user_id', $request->input('user_id'));
             })
-            ->when(!$request->input('user_id'), function ($query) use ($request) {
-                return $query->where('time_entries.user_id', Auth::user()->id);
+            ->when(!$request->input('user_id') && $request->input('user_id') != null && $request->input('user_id') != 0, function ($query) {
+                return $query->where('t.user_id', Auth::user()->id);
             })
-            ->groupBy('users.first_name', 'users.last_name', 'time_entries.entry_date')
-            ->orderBy('time_entries.entry_date', 'desc')
+            ->orderBy('t.entry_date', 'desc')
+            ->orderBy('t.entry_time', 'desc')
             ->get();
     }
 }

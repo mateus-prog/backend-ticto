@@ -16,9 +16,12 @@ class TimeEntryResource extends JsonResource
     public function toArray($request): array
     {
         return [
-            'user' => $this->user,
-            'date' => Format::formatDate($this->date),
-            'times' => $this->times,
+            'id' => $this->id,
+            'employee' => $this->employee,
+            'manager' => $this->manager,
+            'position' => $this->position,
+            'age' => $this->age,
+            'time' => Format::formatDateTime($this->time),
         ];
     }
 }
