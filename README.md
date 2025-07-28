@@ -94,3 +94,13 @@ php artisan migrate
 
 # (Opcional) Rode seeders
 php artisan db:seed
+
+#Query para extrair relatorios
+SELECT 
+    CONCAT(users.first_name, ' ', users.last_name) AS user_name,
+    time_entries.entry_date,
+    GROUP_CONCAT(time_entries.entry_time ORDER BY time_entries.entry_time SEPARATOR ', ') AS times
+FROM time_entries
+JOIN users ON users.id = time_entries.user_id
+GROUP BY users.first_name, users.last_name, time_entries.entry_date
+ORDER BY time_entries.entry_date DESC;
