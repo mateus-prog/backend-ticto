@@ -96,11 +96,14 @@ php artisan migrate
 php artisan db:seed
 
 #Query para extrair relatorios
-SELECT 
-    CONCAT(users.first_name, ' ', users.last_name) AS user_name,
-    time_entries.entry_date,
-    GROUP_CONCAT(time_entries.entry_time ORDER BY time_entries.entry_time SEPARATOR ', ') AS times
-FROM time_entries
-JOIN users ON users.id = time_entries.user_id
-GROUP BY users.first_name, users.last_name, time_entries.entry_date
-ORDER BY time_entries.entry_date DESC;
+SELECT
+    t.id AS registro_id,
+    CONCAT(u.first_name, ' ', u.last_name) AS nome_funcionario,
+    u.position AS cargo,
+    TIMESTAMPDIFF(YEAR, u.date_of_birth, CURDATE()) AS idade,
+    CONCAT(m.first_name, ' ', m.last_name) AS nome_gestor,
+    CONCAT(t.entry_date, ' ', t.entry_time) AS data_hora_registro
+FROM time_entries t
+JOIN users u ON u.id = t.user_id
+LEFT JOIN users m ON u.manager_id = m.id
+ORDER BY t.entry_date DESC, t.entry_time DESC;
